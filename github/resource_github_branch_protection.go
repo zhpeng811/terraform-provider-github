@@ -125,6 +125,63 @@ func resourceGithubBranchProtection() *schema.Resource {
 					},
 				},
 			},
+			PROTECTION_REQUIRES_MERGE_QUEUE: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Enforce restrictions for using merge queues.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						PROTECTION_MERGE_METHOD: {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "squash_merge",
+							Description:  "The merge method to use when merging changes from queued pull requests.",
+							ValidateFunc: validateValueFunc([]string{"merge_commit", "squash_merge", "rebase_merge"}),
+						},
+						PROTECTION_BUILD_CONCURRENCY: {
+							Type:         schema.TypeInt,
+							Optional:     true,
+							Default:      5,
+							Description:  "Limit the number of queued pull requests building at tthe same time.",
+							ValidateFunc: validation.IntBetween(0, 100),
+						},
+						PROTECTION_MERGE_LIMIT_MIN_NUMBER: {
+							Type:         schema.TypeInt,
+							Optional:     true,
+							Default:      1,
+							Description:  "Minimum number of pull requests that can be merged into the protected branch in a single merge operation.",
+							ValidateFunc: validation.IntBetween(1, 100),
+						},
+						PROTECTION_MERGE_LIMIT_MIN_TIME: {
+							Type:         schema.TypeInt,
+							Optional:     true,
+							Default:      5,
+							Description:  "minimum time (in minutes) that pull requests can be merged into the protected branch in a single merge operation.",
+							ValidateFunc: validation.IntBetween(1, 360),
+						},
+						PROTECTION_MERGE_LIMIT_MAX_NUMBER: {
+							Type:         schema.TypeInt,
+							Optional:     true,
+							Default:      5,
+							Description:  "Maximum number of pull requests that can be merged into the protected branch in a single merge operation.",
+							ValidateFunc: validation.IntBetween(1, 100),
+						},
+						PROTECTION_MERGE_ONLY_NON_FAILING_PULL_REQUESTS: {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     true,
+							Description: "Only merge non-failing pull requests into the matching branches",
+						},
+						PROTECTION_STATUS_CHECK_TIMEOUT: {
+							Type:         schema.TypeInt,
+							Optional:     true,
+							Default:      60,
+							Description:  "Time (in minutes) a required status check must report a conclusion within to not be considered failed.",
+							ValidateFunc: validation.IntBetween(1, 360),
+						},
+					},
+				},
+			},
 			PROTECTION_REQUIRES_STATUS_CHECKS: {
 				Type:        schema.TypeList,
 				Optional:    true,
@@ -330,6 +387,12 @@ func resourceGithubBranchProtectionRead(d *schema.ResourceData, meta interface{}
 	err = d.Set(PROTECTION_REQUIRES_APPROVING_REVIEWS, approvingReviews)
 	if err != nil {
 		log.Printf("[DEBUG] Problem setting '%s' in %s %s branch protection (%s)", PROTECTION_REQUIRES_APPROVING_REVIEWS, protection.Repository.Name, protection.Pattern, d.Id())
+	}
+
+	mergeQueue := setMergeQueue(protection)
+	err = d.Set(PROTECTION_REQUIRES_MERGE_QUEUE, mergeQueue)
+	if err != nil {
+		log.Printf("[DEBUG] Problem setting '%s' in %s %s branch protection (%s)", PROTECTION_MERGE_QUEUE, protection.Repository.Name, protection.Pattern, d.Id())
 	}
 
 	statusChecks := setStatusChecks(protection)

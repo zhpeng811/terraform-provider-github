@@ -71,54 +71,70 @@ type BranchProtectionRule struct {
 	BypassPullRequestAllowances struct {
 		Nodes []BypassPullRequestActorTypes
 	} `graphql:"bypassPullRequestAllowances(first: 100)"`
-	AllowsDeletions                githubv4.Boolean
-	AllowsForcePushes              githubv4.Boolean
-	BlocksCreations                githubv4.Boolean
-	DismissesStaleReviews          githubv4.Boolean
-	ID                             githubv4.ID
-	IsAdminEnforced                githubv4.Boolean
-	Pattern                        githubv4.String
-	RequiredApprovingReviewCount   githubv4.Int
-	RequiredStatusCheckContexts    []githubv4.String
-	RequiresApprovingReviews       githubv4.Boolean
-	RequiresCodeOwnerReviews       githubv4.Boolean
-	RequiresCommitSignatures       githubv4.Boolean
-	RequiresLinearHistory          githubv4.Boolean
-	RequiresConversationResolution githubv4.Boolean
-	RequiresStatusChecks           githubv4.Boolean
-	RequiresStrictStatusChecks     githubv4.Boolean
-	RestrictsPushes                githubv4.Boolean
-	RestrictsReviewDismissals      githubv4.Boolean
-	RequireLastPushApproval        githubv4.Boolean
-	LockBranch                     githubv4.Boolean
+	AllowsDeletions                 githubv4.Boolean
+	AllowsForcePushes               githubv4.Boolean
+	BlocksCreations                 githubv4.Boolean
+	DismissesStaleReviews           githubv4.Boolean
+	ID                              githubv4.ID
+	IsAdminEnforced                 githubv4.Boolean
+	Pattern                         githubv4.String
+	RequiredApprovingReviewCount    githubv4.Int
+	RequiredStatusCheckContexts     []githubv4.String
+	RequiresApprovingReviews        githubv4.Boolean
+	RequiresCodeOwnerReviews        githubv4.Boolean
+	RequiresCommitSignatures        githubv4.Boolean
+	RequiresLinearHistory           githubv4.Boolean
+	RequiresConversationResolution  githubv4.Boolean
+	RequiresStatusChecks            githubv4.Boolean
+	RequiresStrictStatusChecks      githubv4.Boolean
+	RestrictsPushes                 githubv4.Boolean
+	RestrictsReviewDismissals       githubv4.Boolean
+	RequireLastPushApproval         githubv4.Boolean
+	LockBranch                      githubv4.Boolean
+	RequiresMergeQueue              githubv4.Boolean
+	MergeMethod                     githubv4.String
+	BuildConcurrency                githubv4.Int
+	MergeLimitMinNumber             githubv4.Int
+	MergeLimitMinTime               githubv4.Int
+	MergeLimitMaxNumber             githubv4.Int
+	MergeOnlyNonFailingPullRequests githubv4.Boolean
+	StatusCheckTimeout              githubv4.Int
 }
 
 type BranchProtectionResourceData struct {
-	AllowsDeletions                bool
-	AllowsForcePushes              bool
-	BlocksCreations                bool
-	BranchProtectionRuleID         string
-	BypassForcePushActorIDs        []string
-	BypassPullRequestActorIDs      []string
-	DismissesStaleReviews          bool
-	IsAdminEnforced                bool
-	Pattern                        string
-	PushActorIDs                   []string
-	RepositoryID                   string
-	RequiredApprovingReviewCount   int
-	RequiredStatusCheckContexts    []string
-	RequiresApprovingReviews       bool
-	RequiresCodeOwnerReviews       bool
-	RequiresCommitSignatures       bool
-	RequiresLinearHistory          bool
-	RequiresConversationResolution bool
-	RequiresStatusChecks           bool
-	RequiresStrictStatusChecks     bool
-	RestrictsPushes                bool
-	RestrictsReviewDismissals      bool
-	ReviewDismissalActorIDs        []string
-	RequireLastPushApproval        bool
-	LockBranch                     bool
+	AllowsDeletions                 bool
+	AllowsForcePushes               bool
+	BlocksCreations                 bool
+	BranchProtectionRuleID          string
+	BypassForcePushActorIDs         []string
+	BypassPullRequestActorIDs       []string
+	DismissesStaleReviews           bool
+	IsAdminEnforced                 bool
+	Pattern                         string
+	PushActorIDs                    []string
+	RepositoryID                    string
+	RequiredApprovingReviewCount    int
+	RequiredStatusCheckContexts     []string
+	RequiresApprovingReviews        bool
+	RequiresCodeOwnerReviews        bool
+	RequiresCommitSignatures        bool
+	RequiresLinearHistory           bool
+	RequiresConversationResolution  bool
+	RequiresStatusChecks            bool
+	RequiresStrictStatusChecks      bool
+	RestrictsPushes                 bool
+	RestrictsReviewDismissals       bool
+	ReviewDismissalActorIDs         []string
+	RequireLastPushApproval         bool
+	LockBranch                      bool
+	RequiresMergeQueue              bool
+	MergeMethod                     string
+	BuildConcurrency                int
+	MergeLimitMinNumber             int
+	MergeLimitMinTime               int
+	MergeLimitMaxNumber             int
+	MergeOnlyNonFailingPullRequests bool
+	StatusCheckTimeout              int
 }
 
 func branchProtectionResourceData(d *schema.ResourceData, meta interface{}) (BranchProtectionResourceData, error) {
@@ -213,6 +229,43 @@ func branchProtectionResourceData(d *schema.ResourceData, meta interface{}) (Bra
 			}
 			if v, ok := m[PROTECTION_REQUIRES_LAST_PUSH_APPROVAL]; ok {
 				data.RequireLastPushApproval = v.(bool)
+			}
+		}
+	}
+
+	if v, ok := d.GetOk(PROTECTION_REQUIRES_MERGE_QUEUE); ok {
+		data.RequiresMergeQueue = true
+		vL := v.([]interface{})
+		if len(vL) > 1 {
+			return BranchProtectionResourceData{},
+				fmt.Errorf("error multiple %s declarations", PROTECTION_REQUIRES_MERGE_QUEUE)
+		}
+		for _, v := range vL {
+			if v == nil {
+				break
+			}
+
+			m := v.(map[string]interface{})
+			if v, ok := m[PROTECTION_MERGE_METHOD]; ok {
+				data.MergeMethod = v.(string)
+			}
+			if v, ok := m[PROTECTION_BUILD_CONCURRENCY]; ok {
+				data.BuildConcurrency = v.(int)
+			}
+			if v, ok := m[PROTECTION_MERGE_LIMIT_MIN_NUMBER]; ok {
+				data.MergeLimitMinNumber = v.(int)
+			}
+			if v, ok := m[PROTECTION_MERGE_LIMIT_MIN_TIME]; ok {
+				data.MergeLimitMinTime = v.(int)
+			}
+			if v, ok := m[PROTECTION_MERGE_LIMIT_MAX_NUMBER]; ok {
+				data.MergeLimitMaxNumber = v.(int)
+			}
+			if v, ok := m[PROTECTION_MERGE_ONLY_NON_FAILING_PULL_REQUESTS]; ok {
+				data.MergeOnlyNonFailingPullRequests = v.(bool)
+			}
+			if v, ok := m[PROTECTION_STATUS_CHECK_TIMEOUT]; ok {
+				data.StatusCheckTimeout = v.(int)
 			}
 		}
 	}
@@ -481,6 +534,27 @@ func setApprovingReviews(protection BranchProtectionRule, data BranchProtectionR
 	}
 
 	return approvalReviews
+}
+
+func setMergeQueue(protection BranchProtectionRule) interface{} {
+	if !protection.RequiresMergeQueue {
+		return nil
+	}
+
+	mergeQueue := []interface{}{
+		map[string]interface{}{
+			PROTECTION_REQUIRES_MERGE_QUEUE:                 protection.RequiresMergeQueue,
+			PROTECTION_MERGE_METHOD:                         protection.MergeMethod,
+			PROTECTION_BUILD_CONCURRENCY:                    protection.BuildConcurrency,
+			PROTECTION_MERGE_LIMIT_MIN_NUMBER:               protection.MergeLimitMinNumber,
+			PROTECTION_MERGE_LIMIT_MIN_TIME:                 protection.MergeLimitMinTime,
+			PROTECTION_MERGE_LIMIT_MAX_NUMBER:               protection.MergeLimitMaxNumber,
+			PROTECTION_MERGE_ONLY_NON_FAILING_PULL_REQUESTS: protection.MergeOnlyNonFailingPullRequests,
+			PROTECTION_STATUS_CHECK_TIMEOUT:                 protection.StatusCheckTimeout,
+		},
+	}
+
+	return mergeQueue
 }
 
 func setStatusChecks(protection BranchProtectionRule) interface{} {
